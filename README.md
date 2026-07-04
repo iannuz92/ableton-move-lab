@@ -17,7 +17,57 @@ It supports two main targets:
 - **Raspberry Pi 4**: build a bootable microSD image and open the GUI over the
   Move/Raspberry USB network at `http://172.16.254.1:9090`.
 
-<img src="docs/images/move-lab-web-gui.jpeg" alt="Ableton Move Lab web GUI" width="900">
+<p align="center">
+  <img src="docs/images/move-lab-web-gui.jpeg" alt="Ableton Move Lab web GUI" width="900">
+</p>
+
+<p align="center">
+  Browser-based Move control surface: display, pads, buttons, LEDs, and audio streaming.
+</p>
+
+## What Is This?
+
+Ableton Move Lab lets you run the original Ableton Move software outside the
+original hardware shell.
+
+Think of it as taking the Move "brain" and exposing it through a browser-based
+control surface.
+
+You can use it to:
+
+- experiment with the Move software stack;
+- run it in a Docker/Linux ARM64 container;
+- run it natively on a Raspberry Pi 4;
+- control display, pads, buttons, LEDs, and audio from a web browser;
+- explore custom hardware or alternative controller ideas.
+
+## Use Cases
+
+- Run the Move software in a container for reverse engineering and development.
+- Build a Raspberry Pi 4 image that runs the Move stack natively.
+- Prototype alternative Move-style hardware without using the original controls.
+- Experiment with browser-based control surfaces for embedded music devices.
+- Study how a standalone music device is structured around Linux, ARM, MIDI, display, LEDs, and audio.
+- Preserve and extend the device over time through community experiments.
+
+## Current Status
+
+Working:
+
+- Move software starts in a Linux ARM64 container.
+- Move software runs on Raspberry Pi 4.
+- Browser GUI is available.
+- Display capture works.
+- Browser controls work.
+- LED feedback works.
+- Browser audio streaming works.
+
+Experimental:
+
+- ALSA/native audio output.
+- Full hardware parity.
+- Pad and step behavior.
+- Custom hardware mappings.
 
 ## Important Boundary
 
