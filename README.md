@@ -41,6 +41,29 @@ You can use it to:
 - control display, pads, buttons, LEDs, and audio from a web browser;
 - explore custom hardware or alternative controller ideas.
 
+## What Is The Shim?
+
+The original Move software expects to talk to dedicated hardware: the display,
+buttons, pads, LEDs, audio path, and the XMOS/SPI communication layer.
+
+The shim is a small native library loaded with `LD_PRELOAD` before the Move
+process starts. It sits between the Move software and the hardware calls it
+expects to make.
+
+In practice, the shim:
+
+- answers the firmware/hardware handshake the Move software expects;
+- captures display and LED data so the web GUI can render it;
+- reads browser control events and feeds them back as hardware-style input;
+- extracts the audio stream so it can be played in the browser;
+- lets the original Move software run without the original control surface.
+
+The shim source lives in `emulator/shim/ablspi_shim.c` and builds to:
+
+```text
+emulator/libablspi_shim.so
+```
+
 ## Use Cases
 
 - Run the Move software in a container for reverse engineering and development.
