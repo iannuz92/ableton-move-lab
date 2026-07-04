@@ -1,0 +1,7 @@
+# Contenuti proprietari Ableton estratti localmente: mai committare.
+rootfs/
+data/
+*.img
+Move
+MoveLauncher
+*.so

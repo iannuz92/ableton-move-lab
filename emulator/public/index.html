@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#111210" />
+    <title>Move Virtual Surface</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="stage">
+      <header class="lab-header">
+        <div>
+          <p class="eyebrow">ABLETONOS / HARDWARE BRIDGE</p>
+          <h1>Ableton Move</h1>
+        </div>
+        <div class="status-cluster">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="bridge-status">connecting</span>
+          <button class="utility" id="audio-toggle">🔇 audio off</button>
+          <button class="utility" id="reset-queue">clear queue</button>
+        </div>
+      </header>
+
+      <section class="move" aria-label="Virtual Ableton Move control surface">
+        <div class="display-shell">
+          <canvas id="display" width="128" height="64" aria-label="Move OLED display"></canvas>
+          <div class="display-scan"></div>
+        </div>
+
+        <button class="wheel" data-button="wheelPress" title="Wheel press" aria-label="Wheel press"></button>
+
+        <div class="left-rounds">
+          <button class="round-button back" data-button="back" title="Back" aria-label="Back">‹</button>
+          <button class="round-button menu" data-unmapped="menu" title="Menu" aria-label="Menu">☰</button>
+        </div>
+
+        <div class="transport">
+          <button class="play" data-button="play" aria-label="Play">▷</button>
+          <button class="record" data-button="record" aria-label="Record">○</button>
+        </div>
+
+        <div class="track-buttons" id="track-buttons" aria-label="Track buttons"></div>
+        <div class="encoder-bank" id="encoder-bank" aria-label="Parameter encoders"></div>
+
+        <div class="pad-zone">
+          <div class="pads" id="pads"></div>
+        </div>
+
+        <div class="step-zone">
+          <div class="steps" id="steps"></div>
+          <div class="step-label"><span>01-16</span><span>BAR 1</span></div>
+        </div>
+
+        <div class="pin-hole" aria-hidden="true"></div>
+        <div class="volume-zone">
+          <div class="encoder volume" data-encoder="8" tabindex="0" title="Volume"></div>
+        </div>
+
+        <div class="right-actions" aria-label="Function buttons">
+          <button data-button="note" title="Note / Session" aria-label="Note / Session">□</button>
+          <button data-button="capture" title="Capture" aria-label="Capture">•</button>
+          <button data-button="sample" title="Sampling" aria-label="Sampling">⌒</button>
+          <button data-button="mute" title="Mute" aria-label="Mute">M</button>
+          <button data-button="delete" title="Delete" aria-label="Delete">×</button>
+          <button data-button="copy" title="Copy" aria-label="Copy">▣</button>
+          <button data-button="undo" title="Undo" aria-label="Undo">↶</button>
+          <button data-button="shift" title="Shift / More" aria-label="Shift / More">…</button>
+        </div>
+
+        <div class="nav-buttons" aria-label="Navigation buttons">
+          <button class="nav-left" data-button="left" title="Previous" aria-label="Previous">‹</button>
+          <button class="nav-plus" data-button="plus" title="Octave up" aria-label="Octave up">+</button>
+          <button class="nav-minus" data-button="minus" title="Octave down" aria-label="Octave down">−</button>
+          <button class="nav-right" data-button="right" title="Next" aria-label="Next">›</button>
+        </div>
+
+        <div class="extra-mapped">
+          <button data-button="loop" title="Loop" aria-label="Loop">Loop</button>
+          <button data-button="session" title="Session alias" aria-label="Session alias">Session</button>
+        </div>
+      </section>
+
+      <footer class="telemetry">
+        <div><span>LAST INPUT</span><strong id="last-input">—</strong></div>
+        <div><span>MIDI QUEUE</span><strong id="midi-count">0 B</strong></div>
+        <div><span>SPI CAPTURE</span><strong id="capture-count">0 B</strong></div>
+        <div class="shortcuts"><span>KEYS</span><strong>SPACE play · R record · 1–8 pads</strong></div>
+      </footer>
+    </main>
+    <script type="module" src="/app.js?v=basic-audio-1"></script>
+  </body>
+</html>

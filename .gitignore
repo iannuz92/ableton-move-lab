@@ -1,0 +1,25 @@
+# Original/proprietary assets kept locally, not committed.
+local/images/
+Documentazione_originale_abletonmove/
+
+# Extracted image/rootfs scratch copies.
+rootfs/
+rootfs;C/
+
+# Built ARM64 artifacts. Rebuild with emulator/build-shim.sh.
+emulator/libablspi_shim.so
+
+# Runtime state produced by the shim/server.
+emulator/input/
+emulator/spi/
+emulator/captures/
+emulator/reverse-captures/
+emulator/*.log
+emulator/syslog.txt
+
+# Accidental Windows/shell artifacts.
+emulator;C/
+fix_exec_bits_tool.py;C/
+
+# OS/editor noise.
+.DS_Store
