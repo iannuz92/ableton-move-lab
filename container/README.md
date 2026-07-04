@@ -1,19 +1,31 @@
 # Move Container
 
-This target runs Ableton Move inside a **Linux ARM64** container on Apple
-Silicon, using the original Move image and `libablspi_shim.so` to emulate the
-XMOS/SPI hardware boundary.
+This target runs Ableton Move inside a **Linux ARM64** container, using the
+original Move image and `libablspi_shim.so` to emulate the XMOS/SPI hardware
+boundary.
+
+It is tested on Apple Silicon, but it is not Mac-only. ARM64 Linux hosts can run
+it natively. x86_64 Linux hosts need Docker/QEMU binfmt support for
+`linux/arm64`, and performance may be slower.
 
 ## Prerequisites
 
-- Docker Desktop running.
+- Docker Engine or Docker Desktop running with `linux/arm64` support.
 - Internet access for the first build, to download:
   - the `ubuntu:22.04` builder image;
   - ARM64 Node.js if it is not already present in `/data`.
-- `e2fsprogs` on macOS:
+- `e2fsprogs` and `fdisk`/`util-linux` tools.
+
+macOS:
 
 ```sh
 brew install e2fsprogs
+```
+
+Debian/Ubuntu Linux:
+
+```sh
+sudo apt-get install e2fsprogs fdisk
 ```
 
 This provides `debugfs`, which `build.sh` uses to read files from the ext
@@ -85,8 +97,9 @@ Ubuntu builder container from:
 ../emulator/shim/ablspi_shim.c
 ```
 
-The Docker volume is required because Move uses **xattr** on sets/songs, and
-macOS bind mounts are not reliable for this workload.
+The Docker volume is required because Move uses **xattr** on sets/songs. A
+Docker-managed volume is more reliable for this workload than host bind mounts,
+especially on macOS.
 
 ## What `run-move.sh` Does
 

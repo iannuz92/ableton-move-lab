@@ -28,10 +28,18 @@ https://www.ableton.com/download/hardware/latest/move/recovery/
 ~/.ssh/id_rsa.pub
 ```
 
-- `e2fsprogs` on macOS:
+- `e2fsprogs` and `fdisk`/`util-linux` tools.
+
+macOS:
 
 ```sh
 brew install e2fsprogs
+```
+
+Debian/Ubuntu Linux:
+
+```sh
+sudo apt-get install e2fsprogs fdisk
 ```
 
 This provides `debugfs` and `e2fsck`. `make-image.sh` uses them to edit and
@@ -57,7 +65,7 @@ Otherwise run:
 ./emulator/build-shim.sh
 ```
 
-On a Mac without a Linux ARM64 toolchain, the simplest path is to run the
+On a host without a Linux ARM64 toolchain, the simplest path is to run the
 container build first. It compiles the shim with Docker:
 
 ```sh

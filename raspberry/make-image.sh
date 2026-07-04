@@ -8,19 +8,59 @@ IMAGES_DIR="$REPO_DIR/local/images"
 PUBKEY="${1:-$HOME/.ssh/id_rsa.pub}"
 SOURCE="${2:-$IMAGES_DIR/Move-Image-2.0.5.img}"
 OUTPUT="${3:-$IMAGES_DIR/Move-Image-2.0.5-pi4.img}"
-DEBUGFS=/opt/homebrew/opt/e2fsprogs/sbin/debugfs
-E2FSCK=/opt/homebrew/opt/e2fsprogs/sbin/e2fsck
-DATA_PARTITION=$(mktemp /private/tmp/move-data.XXXXXX)
-KEYS=$(mktemp /private/tmp/move-keys.XXXXXX)
+DEBUGFS="${DEBUGFS:-}"
+E2FSCK="${E2FSCK:-}"
+TMPDIR="${TMPDIR:-/tmp}"
+DATA_PARTITION=$(mktemp "$TMPDIR/move-data.XXXXXX")
+KEYS=$(mktemp "$TMPDIR/move-keys.XXXXXX")
 
 cleanup() {
   rm -f "$DATA_PARTITION" "$KEYS"
 }
 trap cleanup EXIT INT TERM
 
+find_tool() {
+  var_value="$1"
+  tool_name="$2"
+  homebrew_path="$3"
+  if [ -n "$var_value" ]; then
+    printf '%s\n' "$var_value"
+  elif command -v "$tool_name" >/dev/null 2>&1; then
+    command -v "$tool_name"
+  elif [ -x "$homebrew_path" ]; then
+    printf '%s\n' "$homebrew_path"
+  else
+    return 1
+  fi
+}
+
+fdisk_output() {
+  fdisk -l "$OUTPUT" 2>/dev/null || fdisk "$OUTPUT" 2>/dev/null
+}
+
+partition_start_size() {
+  fdisk_output | awk -v part="$1" '
+    $1 ~ "^[* ]*" part ":" {
+      for (i = 1; i <= NF; i += 1) {
+        if ($i == "[") { print $(i + 1), $(i + 3); exit }
+        if ($i ~ /^\[/) {
+          start = $i
+          gsub(/^\[/, "", start)
+          print start, $(i + 2)
+          exit
+        }
+      }
+    }
+    $1 ~ "p?" part "$" {
+      if ($2 ~ /^[0-9]+$/ && $4 ~ /^[0-9]+$/) { print $2, $4; exit }
+    }
+  '
+}
+
 test -f "$SOURCE"
 test -f "$PUBKEY"
-test -x "$DEBUGFS"
+DEBUGFS="$(find_tool "$DEBUGFS" debugfs /opt/homebrew/opt/e2fsprogs/sbin/debugfs)" || { echo "debugfs not found. Install e2fsprogs." >&2; exit 1; }
+E2FSCK="$(find_tool "$E2FSCK" e2fsck /opt/homebrew/opt/e2fsprogs/sbin/e2fsck)" || { echo "e2fsck not found. Install e2fsprogs." >&2; exit 1; }
 
 if [ -e "$OUTPUT" ]; then
   echo "Refusing to overwrite existing file: $OUTPUT" >&2
@@ -32,11 +72,10 @@ cp -c "$SOURCE" "$OUTPUT" 2>/dev/null || cp "$SOURCE" "$OUTPUT"
 
 # Partition 4 holds /data. Read its start/size (in 512-byte sectors) straight
 # from the MBR table so this works across image versions without hard-coding
-# offsets. fdisk prints the entry as: " 4: 83 ... [ <start> - <size> ] ...".
-PART4=$(/usr/sbin/fdisk "$OUTPUT" 2>/dev/null | grep -E '^[* ]*4:' | head -n1)
-PART4_RANGE=$(printf '%s\n' "$PART4" | sed -E 's/.*\[([^]]*)\].*/\1/')
-PART4_START=$(printf '%s\n' "$PART4_RANGE" | awk '{print $1}')
-PART4_SIZE=$(printf '%s\n' "$PART4_RANGE" | awk '{print $3}')
+# offsets. Supports both macOS fdisk and Linux fdisk output.
+set -- $(partition_start_size 4)
+PART4_START="${1:-}"
+PART4_SIZE="${2:-}"
 
 case "$PART4_START$PART4_SIZE" in
   ''|*[!0-9]*)

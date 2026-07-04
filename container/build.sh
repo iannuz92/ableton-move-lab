@@ -1,19 +1,19 @@
 #!/bin/sh
-# Build the full Docker runtime for running Move on Mac (Linux ARM64).
+# Build the full Docker runtime for running Move in a Linux ARM64 container.
 # Starts from the original Move image, then injects from the repository:
 # - shim /emulator/libablspi_shim.so
 # - GUI Node in /data/emulator-gui
 # - ARM64 Node.js if missing from /data
 #
-# Prerequisites: Docker running, e2fsprogs (brew install e2fsprogs), and network
-# access for downloading Node.js and the Ubuntu builder image on the first run.
+# Prerequisites: Docker running, e2fsprogs/debugfs, and network access for
+# downloading Node.js and the Ubuntu builder image on the first run.
 # Usage: ./build.sh [/path/to/Move-Image-X.Y.Z.img]
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 IMG="${1:-$REPO_DIR/local/images/Move-Image-2.0.5.img}"
-DBG="${DEBUGFS:-/opt/homebrew/opt/e2fsprogs/sbin/debugfs}"
+DBG="${DEBUGFS:-}"
 NODE_VERSION="${NODE_VERSION:-v20.18.1}"
 NODE_DIST="node-$NODE_VERSION-linux-arm64"
 NODE_URL="https://nodejs.org/dist/$NODE_VERSION/$NODE_DIST.tar.xz"
@@ -25,14 +25,42 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+find_debugfs() {
+  if [ -n "$DBG" ]; then
+    printf '%s\n' "$DBG"
+  elif command -v debugfs >/dev/null 2>&1; then
+    command -v debugfs
+  elif [ -x /opt/homebrew/opt/e2fsprogs/sbin/debugfs ]; then
+    printf '%s\n' /opt/homebrew/opt/e2fsprogs/sbin/debugfs
+  else
+    return 1
+  fi
+}
+
+fdisk_output() {
+  fdisk -l "$IMG" 2>/dev/null || fdisk "$IMG" 2>/dev/null
+}
+
 # Partition offsets (512-byte sectors), read from the MBR partition table.
-part_start() { /usr/sbin/fdisk "$IMG" 2>/dev/null | grep -E "^[* ]*$1:" | sed -E 's/.*\[([^]]*)\].*/\1/' | awk '{print $1}'; }
+part_start() {
+  fdisk_output | awk -v part="$1" '
+    $1 ~ "^[* ]*" part ":" {
+      for (i = 1; i <= NF; i += 1) {
+        if ($i == "[") { print $(i + 1); exit }
+        if ($i ~ /^\[/) { gsub(/^\[/, "", $i); print $i; exit }
+      }
+    }
+    $1 ~ "p?" part "$" {
+      if ($2 ~ /^[0-9]+$/) { print $2; exit }
+    }
+  '
+}
 
 echo "[build] image: $IMG"
 
 test -f "$IMG"       || { echo "image not found: $IMG" >&2; exit 1; }
 docker info >/dev/null 2>&1 || { echo "Docker is not running" >&2; exit 1; }
-test -x "$DBG"       || { echo "debugfs not found ($DBG). Run: brew install e2fsprogs" >&2; exit 1; }
+DBG="$(find_debugfs)" || { echo "debugfs not found. Install e2fsprogs (macOS: brew install e2fsprogs; Linux: apt/dnf/pacman equivalent)" >&2; exit 1; }
 test -f "$REPO_DIR/emulator/shim/ablspi_shim.c" || { echo "missing shim source" >&2; exit 1; }
 test -f "$REPO_DIR/emulator/server.mjs" || { echo "missing server.mjs" >&2; exit 1; }
 

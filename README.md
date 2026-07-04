@@ -5,8 +5,9 @@ software stack with a browser-based control surface.
 
 It supports two targets:
 
-- **Linux ARM64 container on Apple Silicon**: fastest way to run the Move stack
-  locally and open the GUI at `http://localhost:9090`.
+- **Linux ARM64 container with Docker**: fastest way to run the Move stack
+  locally and open the GUI at `http://localhost:9090`. This is tested on Apple
+  Silicon, but it is not Mac-only.
 - **Raspberry Pi 4 image**: creates a bootable microSD image from the original
   Move recovery image, then runs Move natively with the GUI exposed over the
   Move/Raspberry USB network interface at `http://172.16.254.1:9090`.
@@ -52,19 +53,31 @@ repository.
 
 Common requirements:
 
-- macOS on Apple Silicon for the container path;
-- Docker Desktop for the container path;
+- Docker Engine or Docker Desktop with `linux/arm64` support for the container
+  path;
 - internet access on first build;
 - original Ableton Move recovery image at `local/images/Move-Image-2.0.5.img`;
-- `e2fsprogs` on macOS:
+- `e2fsprogs` and `fdisk`/`util-linux` tools.
+
+macOS:
 
 ```sh
 brew install e2fsprogs
 ```
 
+Debian/Ubuntu Linux:
+
+```sh
+sudo apt-get install e2fsprogs fdisk
+```
+
 `e2fsprogs` provides tools such as `debugfs` and `e2fsck`. The scripts use them
 to read, edit, and check ext partitions inside the Move image without mounting
 the image directly.
+
+Apple Silicon and ARM64 Linux hosts can run the container natively. x86_64 Linux
+hosts need Docker/QEMU binfmt support for `linux/arm64`, and performance may be
+slower.
 
 Extra Raspberry requirements:
 
@@ -128,7 +141,7 @@ raspberry/
 
 ## Container Guide
 
-Use this path to run Move locally on Apple Silicon with Docker.
+Use this path to run Move locally with Docker.
 
 ### 1. Put The Original Image In Place
 
@@ -361,7 +374,7 @@ Otherwise:
 ./emulator/build-shim.sh
 ```
 
-On a Mac without a Linux ARM64 toolchain, the simplest path is to run the
+On a host without a Linux ARM64 toolchain, the simplest path is to run the
 container build first because it compiles the shim with Docker:
 
 ```sh
