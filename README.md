@@ -64,6 +64,41 @@ The shim source lives in `emulator/shim/ablspi_shim.c` and builds to:
 emulator/libablspi_shim.so
 ```
 
+## Pipeline Map
+
+```mermaid
+flowchart LR
+  A[Official Move recovery image] --> B[Build path]
+  B --> C[Docker Linux ARM64 container]
+  B --> D[Raspberry Pi 4 image]
+
+  C --> E[Original Move software]
+  D --> E
+
+  E --> F[LD_PRELOAD shim]
+  F --> G[Emulated XMOS / SPI hardware layer]
+  F --> H[Display frames]
+  F --> I[LED feedback]
+  F --> J[Audio stream]
+  F --> K[Control input queue]
+
+  H --> L[Node.js web server]
+  I --> L
+  J --> L
+  K --> F
+
+  L --> M[Browser web GUI]
+  M --> K
+```
+
+At a high level:
+
+- the official Move image provides the original Linux/ARM software stack;
+- the build scripts create either a container runtime or a Raspberry Pi image;
+- the shim lets the Move software talk to an emulated hardware layer;
+- the Node.js server exposes display, LEDs, controls, and audio to the browser;
+- the browser GUI sends user input back into the Move process.
+
 ## Use Cases
 
 - Run the Move software in a container for reverse engineering and development.
