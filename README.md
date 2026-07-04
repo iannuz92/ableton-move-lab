@@ -17,6 +17,8 @@ It supports two main targets:
 - **Raspberry Pi 4**: build a bootable microSD image and open the GUI over the
   Move/Raspberry USB network at `http://172.16.254.1:9090`.
 
+<img src="docs/images/move-lab-web-gui.jpeg" alt="Ableton Move Lab web GUI" width="900">
+
 ## Important Boundary
 
 This repository does **not** contain Ableton proprietary files.
