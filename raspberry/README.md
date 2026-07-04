@@ -34,9 +34,12 @@ https://www.ableton.com/download/hardware/latest/move/recovery/
 brew install e2fsprogs
 ```
 
+This provides `debugfs` and `e2fsck`. `make-image.sh` uses them to edit and
+check the ext `/data` partition inside the Move image without mounting it.
+
 - A tool for writing the microSD card, such as Raspberry Pi Imager or `dd`.
-- Network access to the Pi at `172.16.254.1`, which is the default address
-  exposed by the Move image.
+- USB network access to the Pi at `172.16.254.1`. This is the default
+  Move/Raspberry USB gadget address, not a Wi-Fi or Ethernet address.
 
 ## 1. Build The Shim
 
@@ -109,6 +112,13 @@ local/images/Move-Image-2.0.5-pi4.img
 Then boot the Raspberry Pi 4.
 
 ## 4. First SSH Login
+
+Connect the Raspberry Pi 4 to the computer over USB. The Move image exposes a
+USB network interface at:
+
+```text
+172.16.254.1
+```
 
 Verify access:
 

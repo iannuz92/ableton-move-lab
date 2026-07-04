@@ -16,6 +16,9 @@ XMOS/SPI hardware boundary.
 brew install e2fsprogs
 ```
 
+This provides `debugfs`, which `build.sh` uses to read files from the ext
+partitions inside the original Move image without mounting them.
+
 - Local Move recovery image:
 
 ```text

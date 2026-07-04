@@ -91,7 +91,7 @@ The Raspberry guide covers:
 
 - image preparation;
 - first boot;
-- SSH access;
+- SSH access over the Move/Raspberry USB network interface at `172.16.254.1`;
 - shim copy;
 - Node.js installation;
 - server/frontend copy;
