@@ -307,7 +307,7 @@ to build the card.
 
 ## License
 
-Copyright (c) 2026 Simone Iannicelli.
+Copyright (c) 2026 The ableton-move-lab contributors.
 
 This repository's own source code, scripts, web UI, and documentation are
 licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
