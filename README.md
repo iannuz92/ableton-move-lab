@@ -304,3 +304,20 @@ Verified on 2026-07-04:
 The Raspberry Pi flow uses the same shim, server, and frontend. Final hardware
 behavior depends on the Pi, microSD, USB networking, and local Move image used
 to build the card.
+
+## License
+
+Copyright (c) 2026 Simone Iannicelli.
+
+This repository's own source code, scripts, web UI, and documentation are
+licensed under the GNU Affero General Public License v3.0. See [LICENSE](LICENSE).
+
+In practical terms: you can study, run, modify, and share this project, but if
+you distribute modified versions or run a modified network-accessible version,
+you must keep the source available under the same license.
+
+This license applies only to this repository's original code and documentation.
+It does not grant any rights to Ableton's proprietary firmware, binaries,
+recovery images, manuals, trademarks, or other Ableton-owned material.
+
+This project is independent and is not affiliated with or endorsed by Ableton.
