@@ -1,14 +1,14 @@
 # Ableton Move Control Logic Map
 
-Fonte funzionale: `Documentazione_originale_abletonmove/move1-manual-en.pdf`,
-capitoli 6-20, in particolare "Move Control Reference". Fonte numeri MIDI:
-`docs/move-midi-over-usbc-chart.pdf` piu' reverse runtime del binario
-`rootfs/opt/move/Move`.
+Functional source: the private/local Ableton Move manual, chapters 6-20,
+especially "Move Control Reference". MIDI numbering source: a private/local
+USB MIDI chart plus runtime reverse engineering of the `rootfs/opt/move/Move`
+binary.
 
-Questa tabella separa due livelli:
+This table separates two levels:
 
-- **Logic**: cosa deve fare il controllo secondo il manuale.
-- **Protocol**: quale evento MIDI/USB-MIDI mandiamo al binario Move.
+- **Logic**: what the control should do according to the manual.
+- **Protocol**: which MIDI/USB-MIDI event is sent to the Move binary.
 
 ## Global Modes
 

@@ -1,7 +1,8 @@
-// Scheduling audio disaccoppiato dal fetch/decode.
-// Pump.push(buf) accumula AudioBuffer; processTicks() consuma la coda in modo
-// contiguo senza hard-reset di nextStartTime. La timeline resta continua: la
-// cap per duration droppa il front (gap audio = un buffer, ma tempo preservato).
+// Audio scheduling decoupled from fetch/decode.
+// Pump.push(buf) accumulates AudioBuffers; processTicks() consumes the queue
+// contiguously without hard-resetting nextStartTime. The timeline stays
+// continuous: the duration cap drops from the front (audio gap = one buffer,
+// but time is preserved).
 
 export function createAudioPump(audioCtx, opts = {}) {
   const targetLead = opts.targetLead ?? 0.04;
@@ -15,23 +16,23 @@ export function createAudioPump(audioCtx, opts = {}) {
   function processTicks() {
     if (!running) return;
     const now = audioCtx.currentTime;
-    // Cap coda per duration: se supera maxLead, droppiamo front per latenza bassa
+    // Duration queue cap: if it exceeds maxLead, drop from the front for low latency.
     let queuedDuration = 0;
     for (const b of queue) queuedDuration += b.duration;
     while (queue.length > 0 && queuedDuration - maxLead > 1e-9) {
       queuedDuration -= queue[0].duration;
       queue.shift();
     }
-    // Prime: prima schedulazione ancorata a now + targetLead
+    // Prime: first schedule anchored to now + targetLead.
     if (nextStartTime < 0) {
       if (queue.length === 0) return;
       nextStartTime = now + targetLead;
     }
-    // Clamp: se scivolati dietro realtime (coda prosciugata), riaggancia a now + minLead
+    // Clamp: if we slipped behind realtime after the queue ran dry, reattach to now + minLead.
     if (nextStartTime < now + minLead) {
       nextStartTime = now + minLead;
     }
-    // Schedule tutti i buffer entro il budget maxLead
+    // Schedule all buffers within the maxLead budget.
     while (queue.length > 0) {
       const startTime = nextStartTime;
       if (startTime - now > maxLead) break;

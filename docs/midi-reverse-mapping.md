@@ -1,25 +1,25 @@
 # Move MIDI Mapping Reverse Notes
 
-Data raccolti il 2026-06-29 usando il binario Ableton `rootfs/opt/move/Move`
-come oracolo runtime. La mappa dell'emulatore non e' stata usata come fonte:
-`emulator/tools/reverse-midi-scan.mjs` scrive pacchetti USB-MIDI grezzi in
-`emulator/input/midi.bin` e legge direttamente `emulator/spi/tx-packets.bin`
-con i parser locali display/LED.
+Data collected on 2026-06-29 using the Ableton `rootfs/opt/move/Move` binary
+as the runtime oracle. The emulator mapping was not used as a source:
+`emulator/tools/reverse-midi-scan.mjs` writes raw USB-MIDI packets into
+`emulator/input/midi.bin` and reads `emulator/spi/tx-packets.bin` directly with
+the local display/LED parsers.
 
-## Fonti
+## Sources
 
-- Binario: `rootfs/opt/move/Move`
-- Documenti locali:
-  - `docs/move-midi-over-usbc-chart.pdf`
-  - `Documentazione_originale_abletonmove/Ableton Move USB MIDI.pdf`
-- Catture:
+- Binary: `rootfs/opt/move/Move`
+- Private/local documents:
+  - Move USB MIDI chart
+  - Ableton Move manual
+- Captures:
   - `emulator/reverse-captures/2026-06-29T13-52-18-469Z-known.jsonl`
   - `emulator/reverse-captures/2026-06-29T13-53-14-881Z-scan-cc.jsonl`
   - `emulator/reverse-captures/2026-06-29T13-54-41-181Z-scan-notes.jsonl`
 
-## Conferme runtime forti
+## Strong Runtime Confirmations
 
-Questi messaggi grezzi hanno prodotto cambio display e/o LED dal binario:
+These raw messages produced display and/or LED changes from the binary:
 
 | Control | MIDI | Runtime evidence |
 | --- | --- | --- |

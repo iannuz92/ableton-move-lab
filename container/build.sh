@@ -1,13 +1,13 @@
 #!/bin/sh
-# Costruisce l'ambiente Docker completo per eseguire Move sul Mac (Linux ARM64).
-# Parte dall'immagine originale Move, poi inietta dal repo:
+# Build the full Docker runtime for running Move on Mac (Linux ARM64).
+# Starts from the original Move image, then injects from the repository:
 # - shim /emulator/libablspi_shim.so
 # - GUI Node in /data/emulator-gui
-# - Node.js ARM64 se manca in /data
+# - ARM64 Node.js if missing from /data
 #
-# Prerequisiti: Docker in esecuzione, e2fsprogs (brew install e2fsprogs), rete
-# per scaricare Node.js e l'immagine builder Ubuntu al primo run.
-# Uso: ./build.sh [/percorso/Move-Image-X.Y.Z.img]
+# Prerequisites: Docker running, e2fsprogs (brew install e2fsprogs), and network
+# access for downloading Node.js and the Ubuntu builder image on the first run.
+# Usage: ./build.sh [/path/to/Move-Image-X.Y.Z.img]
 set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
@@ -25,26 +25,26 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-# Offset delle partizioni (settori da 512 byte), letti dalla tabella MBR.
+# Partition offsets (512-byte sectors), read from the MBR partition table.
 part_start() { /usr/sbin/fdisk "$IMG" 2>/dev/null | grep -E "^[* ]*$1:" | sed -E 's/.*\[([^]]*)\].*/\1/' | awk '{print $1}'; }
 
-echo "[build] immagine: $IMG"
+echo "[build] image: $IMG"
 
-test -f "$IMG"       || { echo "immagine non trovata: $IMG" >&2; exit 1; }
-docker info >/dev/null 2>&1 || { echo "Docker non è in esecuzione" >&2; exit 1; }
-test -x "$DBG"       || { echo "debugfs non trovato ($DBG). brew install e2fsprogs" >&2; exit 1; }
-test -f "$REPO_DIR/emulator/shim/ablspi_shim.c" || { echo "shim source mancante" >&2; exit 1; }
-test -f "$REPO_DIR/emulator/server.mjs" || { echo "server.mjs mancante" >&2; exit 1; }
+test -f "$IMG"       || { echo "image not found: $IMG" >&2; exit 1; }
+docker info >/dev/null 2>&1 || { echo "Docker is not running" >&2; exit 1; }
+test -x "$DBG"       || { echo "debugfs not found ($DBG). Run: brew install e2fsprogs" >&2; exit 1; }
+test -f "$REPO_DIR/emulator/shim/ablspi_shim.c" || { echo "missing shim source" >&2; exit 1; }
+test -f "$REPO_DIR/emulator/server.mjs" || { echo "missing server.mjs" >&2; exit 1; }
 
 P2=$(( $(part_start 2) * 512 ))   # rootfs
 P4=$(( $(part_start 4) * 512 ))   # /data
 echo "[build] rootfs @ $P2 , data @ $P4"
 
-echo "[build] estraggo la rootfs..."
+echo "[build] extracting rootfs..."
 mkdir -p "$WORK/rootfs"
 "$DBG" -R "rdump / $WORK/rootfs" "$IMG?offset=$P2" >/dev/null 2>&1
 
-echo "[build] compilo/inietto lo shim ARM64..."
+echo "[build] compiling/injecting ARM64 shim..."
 if [ ! -f "$SHIM_OUT" ] || [ "$REPO_DIR/emulator/shim/ablspi_shim.c" -nt "$SHIM_OUT" ]; then
   docker run --rm \
     --platform linux/arm64 \
@@ -61,19 +61,19 @@ if [ ! -f "$SHIM_OUT" ] || [ "$REPO_DIR/emulator/shim/ablspi_shim.c" -nt "$SHIM_
       aarch64-linux-gnu-readelf -h libablspi_shim.so | sed -n "1,12p"
     '
 fi
-test -f "$SHIM_OUT" || { echo "shim non compilato: $SHIM_OUT" >&2; exit 1; }
+test -f "$SHIM_OUT" || { echo "shim was not compiled: $SHIM_OUT" >&2; exit 1; }
 mkdir -p "$WORK/rootfs/emulator"
 cp "$SHIM_OUT" "$WORK/rootfs/emulator/libablspi_shim.so"
 chmod 755 "$WORK/rootfs/emulator/libablspi_shim.so"
 
-echo "[build] importo l'immagine Docker move-rootfs..."
+echo "[build] importing Docker image move-rootfs..."
 ( cd "$WORK/rootfs" && tar -cf - . ) | docker import --platform linux/arm64 - move-rootfs:latest
 
-echo "[build] estraggo /data..."
+echo "[build] extracting /data..."
 mkdir -p "$WORK/data"
 "$DBG" -R "rdump / $WORK/data" "$IMG?offset=$P4" >/dev/null 2>&1
 
-echo "[build] inietto GUI web dal repo..."
+echo "[build] injecting web GUI from repository..."
 rm -rf "$WORK/data/emulator-gui"
 mkdir -p "$WORK/data/emulator-gui"
 cp "$REPO_DIR/emulator/server.mjs" "$WORK/data/emulator-gui/server.mjs"
@@ -81,13 +81,13 @@ cp -R "$REPO_DIR/emulator/lib" "$WORK/data/emulator-gui/lib"
 cp -R "$REPO_DIR/emulator/public" "$WORK/data/emulator-gui/public"
 
 if [ ! -x "$WORK/data/$NODE_DIST/bin/node" ]; then
-  echo "[build] installo Node.js ARM64 in /data ($NODE_VERSION)..."
+  echo "[build] installing ARM64 Node.js in /data ($NODE_VERSION)..."
   curl -fL "$NODE_URL" -o "$WORK/node.tar.xz"
   tar -xf "$WORK/node.tar.xz" -C "$WORK/data"
 fi
 
-echo "[build] popolo il volume move-data-vol..."
+echo "[build] populating move-data-vol volume..."
 docker volume create move-data-vol >/dev/null
 ( cd "$WORK/data" && tar -cf - . ) | docker run --rm -i -v move-data-vol:/data --platform linux/arm64 move-rootfs:latest tar -C /data -xf -
 
-echo "[build] fatto. Avvia con ./run-move.sh"
+echo "[build] done. Start with ./run-move.sh"

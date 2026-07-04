@@ -1,46 +1,39 @@
 # Move Container
 
-Esegue Ableton Move dentro un container **Linux ARM64** su Mac Apple Silicon,
-usando l'immagine originale Move e lo shim `libablspi_shim.so` per emulare
-hardware XMOS/SPI.
+This target runs Ableton Move inside a **Linux ARM64** container on Apple
+Silicon, using the original Move image and `libablspi_shim.so` to emulate the
+XMOS/SPI hardware boundary.
 
-## Prerequisiti
+## Prerequisites
 
-- Docker Desktop attivo.
-- Connessione internet al primo build, per scaricare:
-  - immagine builder `ubuntu:22.04`;
-  - Node.js ARM64 se non e' gia' presente in `/data`.
-- `e2fsprogs` su macOS:
+- Docker Desktop running.
+- Internet access for the first build, to download:
+  - the `ubuntu:22.04` builder image;
+  - ARM64 Node.js if it is not already present in `/data`.
+- `e2fsprogs` on macOS:
 
 ```sh
 brew install e2fsprogs
 ```
 
-- Immagine Move locale:
+- Local Move recovery image:
 
 ```text
 ../local/images/Move-Image-2.0.5.img
 ```
 
-Download ufficiale Ableton:
+Official Ableton recovery download:
 
 ```text
 https://www.ableton.com/download/hardware/latest/move/recovery/
 ```
 
-- Shim gia' presente nella rootfs dell'immagine o copiato dal progetto durante
-  il build. Se manca, `build.sh` lo compila da:
+Ableton binaries remain outside Git. `build.sh` extracts them locally from the
+original recovery image.
 
-```text
-../emulator/shim/ablspi_shim.c
-```
+## Complete Startup
 
-I binari Ableton restano fuori dal Git: `build.sh` li estrae localmente
-dall'immagine originale.
-
-## Avvio Completo
-
-Da questa cartella:
+From this directory:
 
 ```sh
 cd container
@@ -48,70 +41,75 @@ cd container
 ./run-move.sh
 ```
 
-Poi aprire:
+Then open:
 
 ```text
 http://localhost:9090
 ```
 
-Se l'immagine ha un path diverso:
+If the image is stored somewhere else:
 
 ```sh
-./build.sh /percorso/Move-Image-2.0.5.img
+./build.sh /path/to/Move-Image-2.0.5.img
 ./run-move.sh
 ```
 
-## Cosa Fa `build.sh`
+## What `build.sh` Does
 
-`build.sh` non richiede una immagine gia' patchata. Parte dall'immagine Move
-originale e legge la tabella MBR per estrarre:
+`build.sh` does not require a pre-patched image. It starts from the original
+Move recovery image and reads the MBR partition table to extract:
 
-- partizione rootfs;
-- partizione `/data`.
+- the root filesystem partition;
+- the `/data` partition.
 
-Poi crea:
+It then creates:
 
-- immagine Docker `move-rootfs:latest`, importando la rootfs originale Move;
-- volume Docker `move-data-vol`, popolato con `/data`.
+- Docker image `move-rootfs:latest`, imported from the original Move rootfs;
+- Docker volume `move-data-vol`, populated with the original `/data` contents.
 
-Poi inietta dal repo:
+It injects the open files from this repository:
 
-- `../emulator/libablspi_shim.so` in `/emulator/libablspi_shim.so`;
-- `../emulator/server.mjs` in `/data/emulator-gui/server.mjs`;
-- `../emulator/lib/` in `/data/emulator-gui/lib/`;
-- `../emulator/public/` in `/data/emulator-gui/public/`;
-- Node.js ARM64 in `/data/node-v20.18.1-linux-arm64/`, se manca.
+- `../emulator/libablspi_shim.so` into `/emulator/libablspi_shim.so`;
+- `../emulator/server.mjs` into `/data/emulator-gui/server.mjs`;
+- `../emulator/lib/` into `/data/emulator-gui/lib/`;
+- `../emulator/public/` into `/data/emulator-gui/public/`;
+- ARM64 Node.js into `/data/node-v20.18.1-linux-arm64/`, if missing.
 
-Se `../emulator/libablspi_shim.so` non esiste, viene compilato con un container
-builder Ubuntu ARM64.
+If `../emulator/libablspi_shim.so` does not exist, it is compiled with an ARM64
+Ubuntu builder container from:
 
-Il volume Docker e' necessario: Move usa **xattr** sui set/songs, e i bind mount
-macOS non sono affidabili per questo uso.
+```text
+../emulator/shim/ablspi_shim.c
+```
 
-## Cosa Fa `run-move.sh`
+The Docker volume is required because Move uses **xattr** on sets/songs, and
+macOS bind mounts are not reliable for this workload.
 
-Avvia un container chiamato `move` con:
+## What `run-move.sh` Does
 
-- porta `9090` esposta su `localhost`;
-- volume `move-data-vol` montato su `/data`;
-- `entrypoint.sh` montato read-only;
-- capability per scheduling/audio:
+`run-move.sh` starts a container named `move` with:
+
+- port `9090` exposed on `localhost`;
+- Docker volume `move-data-vol` mounted at `/data`;
+- `entrypoint.sh` mounted read-only;
+- scheduling/audio capabilities:
   - `SYS_NICE`
   - `IPC_LOCK`
   - `rtprio=99`
   - `memlock=-1`
 
-Variabile utile:
+Useful variable:
 
 ```sh
 MOVE_CONTAINER_DEMO_AUDIO=0 ./run-move.sh
 ```
 
-Disattiva la seed automatica del demo set/volume.
+This disables the automatic demo set/volume seed.
 
-## Cosa Fa `entrypoint.sh`
+## What `entrypoint.sh` Does
 
-Dentro il container avvia lo stack completo richiesto dai binari Move:
+Inside the container, `entrypoint.sh` starts the full service stack expected by
+the Move binaries:
 
 1. D-Bus system bus.
 2. ConnMan.
@@ -121,68 +119,67 @@ Dentro il container avvia lo stack completo richiesto dai binari Move:
    - `/tmp/sockinstctrl`
 5. Placeholder device:
    - `/dev/ablspi0.0`
-6. Directory shim:
+6. Shim working directories:
    - `/emulator/input`
    - `/emulator/spi`
-7. GUI Node:
+7. Node GUI:
    - `/data/emulator-gui/server.mjs`
-8. `MoveLauncher` con `LD_PRELOAD=/emulator/libablspi_shim.so`.
-9. Attesa handshake XMOS:
+8. `MoveLauncher` with `LD_PRELOAD=/emulator/libablspi_shim.so`.
+9. XMOS handshake wait:
    - `MoveFirmwareAutoUpdater quit with code 0`
-10. Motore `Move.nocap` con:
+10. `Move.nocap` engine with:
    - `MOVE_AUDIO_STREAM=1`
    - `MOVE_XMOS_DEVINFO=1`
    - `MOVE_XMOS_FORCE_DISPLAY=1`
    - `LD_PRELOAD=/emulator/libablspi_shim.so`
-11. Tap Shift iniziale per svegliare display/engine, come nel setup Raspberry.
+11. Initial Shift tap to wake the display/engine, matching the Raspberry setup.
 
-Se `MOVE_CONTAINER_DEMO_AUDIO` non e' `0`, l'entrypoint rende il primo avvio
-subito udibile:
+Unless `MOVE_CONTAINER_DEMO_AUDIO=0`, the first run is made immediately audible:
 
-- se `currentSongIndex` e' `-1`, lo porta a `1`;
-- se `globalVolume` e' `0.0`, lo porta a `0.8`.
+- if `currentSongIndex` is `-1`, it is changed to `1`;
+- if `globalVolume` is `0.0`, it is changed to `0.8`.
 
-## Perche' Serve SWUpdate
+## Why SWUpdate Is Required
 
-Questo e' stato il pezzo decisivo.
+SWUpdate IPC is required for the Move engine to enter the active SPI/audio loop.
 
-Senza SWUpdate IPC, `Move` e `MoveControlModeHandler` restano vivi ma fanno
-polling continuo su:
+Without SWUpdate IPC, `Move` and `MoveControlModeHandler` stay alive but keep
+polling:
 
 ```text
 /tmp/swupdateprog
 ```
 
-e il loop audio/SPI non parte. Sintomo:
+Symptoms:
 
-- GUI HTTP 200;
-- processo `Move` vivo;
-- handshake XMOS completato;
-- `audio.raw` fermo o assente.
+- GUI returns HTTP 200;
+- `Move` process is alive;
+- XMOS handshake completes;
+- `audio.raw` is missing or does not grow.
 
-Con SWUpdate attivo:
+With SWUpdate running:
 
-- `/tmp/swupdateprog` esiste;
-- `/tmp/sockinstctrl` esiste;
-- `/emulator/spi/audio.raw` cresce;
-- `/emulator/spi/tx-packets.bin` cresce;
-- display e audio passano dalla GUI.
+- `/tmp/swupdateprog` exists;
+- `/tmp/sockinstctrl` exists;
+- `/emulator/spi/audio.raw` grows;
+- `/emulator/spi/tx-packets.bin` grows;
+- display and audio are available through the GUI.
 
-## Verifiche
+## Verification
 
-Stato container:
+Container status:
 
 ```sh
 docker ps --filter name=move
 ```
 
-API GUI:
+GUI API:
 
 ```sh
 curl http://localhost:9090/api/status
 ```
 
-Atteso:
+Expected:
 
 ```json
 {"bridge":"running"}
@@ -194,7 +191,7 @@ Display:
 curl http://localhost:9090/api/display
 ```
 
-Atteso:
+Expected:
 
 ```json
 {"available":true,"width":128,"height":64}
@@ -209,13 +206,13 @@ docker cp move:/emulator/spi/audio.raw /tmp/audio-2.raw
 ls -l /tmp/audio-1.raw /tmp/audio-2.raw
 ```
 
-Il file deve crescere. Target indicativo:
+The file should grow. Approximate target for 44.1 kHz stereo 16-bit PCM:
 
 ```text
 ~176400 B/s
 ```
 
-PCM non-zero dopo `Play`:
+Non-zero PCM after `Play`:
 
 ```sh
 curl -X POST http://localhost:9090/api/control \
@@ -227,7 +224,7 @@ curl -X POST http://localhost:9090/api/control \
   -d '{"type":"button","id":"play","action":"release"}'
 ```
 
-Poi controllare l'ultimo secondo di audio:
+Then inspect the last second of audio:
 
 ```sh
 docker cp move:/emulator/spi/audio.raw /tmp/move-audio.raw
@@ -241,17 +238,17 @@ print('unique', len(set(data)) if data else 0)
 PY
 ```
 
-Con demo set e volume attivi, `nonzero` deve essere alto.
+With the demo set and volume seed enabled, `nonzero` should be high.
 
-## Log Utili
+## Useful Logs
 
-Dentro il container:
+Enter the container:
 
 ```sh
 docker exec -it move sh
 ```
 
-Log principali:
+Main logs:
 
 ```text
 /tmp/move-launcher.log
@@ -260,7 +257,7 @@ Log principali:
 /tmp/swupdate.log
 ```
 
-File prodotti dallo shim:
+Shim output files:
 
 ```text
 /emulator/spi/tx-packets.bin
@@ -271,13 +268,13 @@ File prodotti dallo shim:
 
 ## Reset
 
-Riavviare solo il container:
+Restart only the container:
 
 ```sh
 ./run-move.sh
 ```
 
-Ricostruire da zero immagine Docker e volume:
+Rebuild the Docker image and volume from scratch:
 
 ```sh
 docker rm -f move 2>/dev/null || true
@@ -287,14 +284,14 @@ docker image rm move-rootfs:latest 2>/dev/null || true
 ./run-move.sh
 ```
 
-## Stato Verificato
+## Verified Status
 
-Verificato il 2026-07-04:
+Verified on 2026-07-04:
 
-- binari Move avviati in Linux ARM64;
-- handshake XMOS completato;
-- `Move` legge Core Library e resta vivo;
-- GUI disponibile su `http://localhost:9090`;
-- display disponibile via `/api/display`;
-- audio stream attivo via `/emulator/spi/audio.raw`;
-- PCM non-zero dopo `Play` su demo set.
+- Move binaries start in Linux ARM64;
+- XMOS handshake completes;
+- `Move` reads the Core Library and stays alive;
+- GUI is available at `http://localhost:9090`;
+- display is available through `/api/display`;
+- audio stream is active through `/emulator/spi/audio.raw`;
+- PCM becomes non-zero after `Play` on the demo set.

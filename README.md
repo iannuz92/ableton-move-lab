@@ -1,38 +1,39 @@
 # Ableton Move Lab
 
-Repo per far girare Ableton Move con una GUI web usando l'immagine originale
-Ableton Move.
+This repository contains the open tooling needed to run the Ableton Move
+software stack with a browser-based control surface.
 
-Il Git contiene solo script, shim, server e frontend. Non contiene:
+The repository intentionally contains only scripts, shim source code, the Node
+server, the browser UI, tests, and engineering notes. It does **not** contain:
 
-- immagini `.img`;
-- binari proprietari Ableton;
-- manuali/PDF proprietari;
-- rootfs estratte;
-- log/capture runtime.
+- Ableton Move `.img` files;
+- proprietary Ableton binaries;
+- proprietary manuals or PDFs;
+- extracted root filesystems;
+- runtime logs or captures.
 
-Chi clona il repo deve procurarsi localmente l'immagine originale Move e
-metterla qui:
+Anyone cloning the repository must download the original Move recovery image
+locally and place it here:
 
 ```text
 local/images/Move-Image-2.0.5.img
 ```
 
-Download ufficiale Ableton:
+Official Ableton recovery download:
 
 ```text
 https://www.ableton.com/download/hardware/latest/move/recovery/
 ```
 
-`local/images/` e' ignorata da Git.
+`local/images/` is ignored by Git.
 
-## Percorsi Supportati
+## Supported Targets
 
-Ci sono due modi per usare il progetto.
+There are two supported ways to use the project.
 
-### 1. Container Linux ARM64
+### 1. Linux ARM64 Container
 
-Percorso piu' rapido per provare Move su Mac Apple Silicon con GUI web:
+Fastest path for running Move on Apple Silicon with the web GUI:
 
 ```sh
 cd container
@@ -40,24 +41,24 @@ cd container
 ./run-move.sh
 ```
 
-Poi aprire:
+Then open:
 
 ```text
 http://localhost:9090
 ```
 
-`container/build.sh` parte dall'immagine originale e crea un ambiente
-Docker completo:
+`container/build.sh` starts from the original Move image and creates a complete
+Docker runtime:
 
-- estrae rootfs e `/data` dall'immagine Move;
-- crea l'immagine Docker `move-rootfs:latest`;
-- crea/popola il volume Docker `move-data-vol`;
-- compila `emulator/shim/ablspi_shim.c` in `emulator/libablspi_shim.so` se manca;
-- inietta lo shim in `/emulator/libablspi_shim.so`;
-- inietta GUI e server in `/data/emulator-gui`;
-- installa Node.js ARM64 in `/data` se manca.
+- extracts the root filesystem and `/data` partition from the Move image;
+- creates the Docker image `move-rootfs:latest`;
+- creates and populates the Docker volume `move-data-vol`;
+- compiles `emulator/shim/ablspi_shim.c` into `emulator/libablspi_shim.so` if needed;
+- injects the shim into `/emulator/libablspi_shim.so`;
+- injects the GUI and server into `/data/emulator-gui`;
+- installs ARM64 Node.js into `/data` if needed.
 
-Guida completa:
+Full guide:
 
 ```text
 container/README.md
@@ -65,71 +66,71 @@ container/README.md
 
 ### 2. Raspberry Pi 4
 
-Percorso per creare una microSD avviabile su Raspberry Pi 4 e far girare Move
-nativamente con la stessa GUI web.
+Path for creating a bootable Raspberry Pi 4 microSD image that runs Move
+natively with the same web GUI.
 
-Partenza:
+Start from the repository root:
 
 ```sh
 ./raspberry/make-image.sh
 ```
 
-Output predefinito:
+Default output:
 
 ```text
 local/images/Move-Image-2.0.5-pi4.img
 ```
 
-Poi seguire la guida:
+Then follow:
 
 ```text
 raspberry/README.md
 ```
 
-La guida Raspberry copre:
+The Raspberry guide covers:
 
-- preparazione immagine;
-- primo boot;
-- SSH;
-- copia shim;
-- installazione Node;
-- copia server/frontend;
-- installazione script `/emulator/start-native.sh`;
-- avvio e verifica della GUI su `http://172.16.254.1:9090`.
+- image preparation;
+- first boot;
+- SSH access;
+- shim copy;
+- Node.js installation;
+- server/frontend copy;
+- `/emulator/start-native.sh` installation;
+- startup and GUI verification at `http://172.16.254.1:9090`.
 
-## Struttura
+## Repository Layout
 
 ```text
 emulator/
-  server.mjs              # API + static server GUI
-  public/                 # frontend browser
-  lib/                    # parser/protocollo display, LED, MIDI, audio
-  shim/                   # sorgente C LD_PRELOAD
-  tools/                  # reverse/debug manuale
-  tests/                  # test Node
-  docs/                   # note tecniche emulator
+  server.mjs              # API + static web GUI server
+  public/                 # browser frontend
+  lib/                    # display, LED, MIDI, and audio protocol helpers
+  shim/                   # LD_PRELOAD C shim source
+  tools/                  # manual reverse/debug tools
+  tests/                  # Node tests
+  docs/                   # emulator engineering notes
 
 container/
-  build.sh                # crea container completo dall'immagine originale
-  run-move.sh             # avvia container
-  entrypoint.sh           # avvia servizi + Move nel container
-  README.md               # guida completa container
+  build.sh                # builds the full container runtime from the original image
+  run-move.sh             # starts the container
+  entrypoint.sh           # starts services + Move inside the container
+  README.md               # complete container guide
 
 raspberry/
-  make-image.sh           # prepara immagine Pi da immagine Move locale
-  start-native.sh         # runtime nativo sul Pi
-  README.md               # guida completa Raspberry
+  make-image.sh           # prepares a Raspberry Pi image from the local Move image
+  start-native.sh         # native runtime launcher for the Pi
+  README.md               # complete Raspberry guide
 ```
 
-## Verifiche Sviluppo
+## Development Checks
 
-Test JS:
+Run the JavaScript tests:
 
 ```sh
 node --test emulator/tests/*.test.mjs
 ```
 
-Controllo script shell:
+Check shell script syntax:
 
 ```sh
 sh -n emulator/build-shim.sh \
@@ -137,16 +138,16 @@ sh -n emulator/build-shim.sh \
   raspberry/make-image.sh raspberry/start-native.sh
 ```
 
-Compilare lo shim manualmente:
+Build the shim manually:
 
 ```sh
 ./emulator/build-shim.sh
 ```
 
-Il risultato locale e':
+Local build output:
 
 ```text
 emulator/libablspi_shim.so
 ```
 
-Il file compilato e' ignorato da Git.
+The compiled `.so` is ignored by Git.

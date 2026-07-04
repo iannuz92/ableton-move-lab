@@ -1,18 +1,18 @@
 #!/bin/sh
-# Avvia lo stack Move emulato in un container Linux ARM64 sul Mac.
-# Richiede: ./build.sh già eseguito (immagine move-rootfs + volume move-data-vol).
+# Start the emulated Move stack in a Linux ARM64 container on Mac.
+# Requires ./build.sh to have been run already (move-rootfs image + move-data-vol volume).
 # GUI web su http://localhost:9090
 set -eu
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 NAME="${NAME:-move}"
 
-docker image inspect move-rootfs:latest >/dev/null 2>&1 || { echo "manca l'immagine move-rootfs. Esegui ./build.sh" >&2; exit 1; }
-docker volume inspect move-data-vol   >/dev/null 2>&1 || { echo "manca il volume move-data-vol. Esegui ./build.sh" >&2; exit 1; }
+docker image inspect move-rootfs:latest >/dev/null 2>&1 || { echo "missing move-rootfs image. Run ./build.sh" >&2; exit 1; }
+docker volume inspect move-data-vol   >/dev/null 2>&1 || { echo "missing move-data-vol volume. Run ./build.sh" >&2; exit 1; }
 
 docker rm -f "$NAME" >/dev/null 2>&1 || true
 
-echo "Avvio container '$NAME'... GUI: http://localhost:9090"
+echo "Starting container '$NAME'... GUI: http://localhost:9090"
 exec docker run --rm -it --name "$NAME" \
   --platform linux/arm64 \
   --cap-add=SYS_NICE --cap-add=IPC_LOCK \

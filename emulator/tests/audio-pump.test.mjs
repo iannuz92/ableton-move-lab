@@ -9,7 +9,7 @@ function approxEqual(actual, expected, third, fourth) {
   assert.ok(Math.abs(actual - expected) < eps, msg);
 }
 
-// Mock AudioContext: registra start() calls con (startedAt, buf)
+// Mock AudioContext: records start() calls as (startedAt, buf).
 function makeMockCtx(initialTime = 0) {
   const scheduled = [];
   return {
@@ -34,7 +34,7 @@ function makeBuffer(duration) {
   return { duration, getChannelData: () => new Float32Array(0) };
 }
 
-test('prime: prima schedulazione ancorata a now + targetLead', () => {
+test('prime: first schedule anchored to now + targetLead', () => {
   const ctx = makeMockCtx(0);
   const pump = createAudioPump(ctx, { targetLead: 0.04, minLead: 0.005, maxLead: 0.20 });
   pump.start();
@@ -46,7 +46,7 @@ test('prime: prima schedulazione ancorata a now + targetLead', () => {
   pump.stop();
 });
 
-test('scheduling contiguo: buffer consecutivi senza gap né overlap', () => {
+test('contiguous scheduling: consecutive buffers without gaps or overlap', () => {
   const ctx = makeMockCtx(0);
   const pump = createAudioPump(ctx, { targetLead: 0.04, minLead: 0.005, maxLead: 0.20 });
   pump.start();
@@ -61,12 +61,12 @@ test('scheduling contiguo: buffer consecutivi senza gap né overlap', () => {
   pump.stop();
 });
 
-test('cap coda: quando queuedDuration supera maxLead, droppa il front', () => {
+test('queue cap: when queuedDuration exceeds maxLead, drops from the front', () => {
   const ctx = makeMockCtx(0);
   const pump = createAudioPump(ctx, { targetLead: 0.04, minLead: 0.005, maxLead: 0.20 });
   pump.start();
-  // Dieci buffer da 0.05s = 0.50s totali. Cap drop a qd ≤ 0.20 (6 drop, 4 residui).
-  // Schedule: prime 0.04, poi 0.09, 0.14, 0.19 → 4 schedulati (lead ≤ 0.20).
+  // Ten 0.05s buffers = 0.50s total. Cap drops to qd <= 0.20 (6 dropped, 4 left).
+  // Schedule: prime 0.04, then 0.09, 0.14, 0.19 -> 4 scheduled (lead <= 0.20).
   for (let i = 0; i < 10; i += 1) {
     const b = makeBuffer(0.05);
     b.id = i;
@@ -75,14 +75,14 @@ test('cap coda: quando queuedDuration supera maxLead, droppa il front', () => {
   pump.processTicks();
   assert.equal(ctx._scheduled.length, 4);
   assert.equal(pump.queueLength, 0);
-  // I sopravvissuti sono gli ultimi 4 della coda (id 6-9), dopo il cap
+  // Survivors are the last 4 queue items (id 6-9), after the cap.
   for (let i = 0; i < 4; i += 1) {
     assert.equal(ctx._scheduled[i].buffer.id, 6 + i);
   }
   pump.stop();
 });
 
-test('cap coda preserva timeline: nessun overlap, tempo contiguo', () => {
+test('queue cap preserves timeline: no overlap, contiguous time', () => {
   const ctx = makeMockCtx(0);
   const pump = createAudioPump(ctx, { targetLead: 0.04, minLead: 0.005, maxLead: 0.20 });
   pump.start();
@@ -96,20 +96,20 @@ test('cap coda preserva timeline: nessun overlap, tempo contiguo', () => {
     const prev = ctx._scheduled[i - 1];
     const cur = ctx._scheduled[i];
     approxEqual(cur.startedAt, prev.startedAt + prev.buffer.duration,
-      `step ${i}: timeline non contigua`);
+      `step ${i}: timeline not contiguous`);
   }
   pump.stop();
 });
 
-test('dry queue recovery: clamp a now + minLead dopo silenzio', () => {
+test('dry queue recovery: clamps to now + minLead after silence', () => {
   const ctx = makeMockCtx(0);
   const pump = createAudioPump(ctx, { targetLead: 0.04, minLead: 0.005, maxLead: 0.20 });
   pump.start();
   pump.push(makeBuffer(0.01));
   pump.processTicks();
-  // Coda prosciugata, audio context avanza di 0.5s (silenzio)
+  // Queue ran dry; audio context advances by 0.5s (silence).
   ctx.advance(0.5);
-  // nextStartTime era 0.05, currentTime 0.5 → clamp a 0.505
+  // nextStartTime was 0.05, currentTime is 0.5 -> clamp to 0.505.
   pump.push(makeBuffer(0.01));
   pump.processTicks();
   assert.equal(ctx._scheduled.length, 2);
@@ -119,31 +119,31 @@ test('dry queue recovery: clamp a now + minLead dopo silenzio', () => {
   pump.stop();
 });
 
-test('max lead: scheduler non schedula oltre now + maxLead', () => {
+test('max lead: scheduler does not schedule beyond now + maxLead', () => {
   const ctx = makeMockCtx(0);
   const pump = createAudioPump(ctx, { targetLead: 0.10, minLead: 0.005, maxLead: 0.16 });
   pump.start();
-  // 4 buffer da 0.05s, qd 0.20. Cap con maxLead 0.16: drop 1 → queue 3 (qd 0.15).
+  // Four 0.05s buffers, qd 0.20. Cap with maxLead 0.16: drop 1 -> queue 3 (qd 0.15).
   // Prime 0.10, schedule:
-  //   iter1: start 0.10, lead 0.10 ≤ 0.16 → OK. nextStart 0.15.
-  //   iter2: start 0.15, lead 0.15 ≤ 0.16 → OK. nextStart 0.20.
-  //   iter3: start 0.20, lead 0.20 > 0.16 → BREAK. 1 buffer rimane in coda.
+  //   iter1: start 0.10, lead 0.10 <= 0.16 -> OK. nextStart 0.15.
+  //   iter2: start 0.15, lead 0.15 <= 0.16 -> OK. nextStart 0.20.
+  //   iter3: start 0.20, lead 0.20 > 0.16 -> BREAK. 1 buffer remains queued.
   for (let i = 0; i < 4; i += 1) pump.push(makeBuffer(0.05));
   pump.processTicks();
   assert.equal(ctx._scheduled.length, 2);
   approxEqual(ctx._scheduled[0].startedAt, 0.10);
   approxEqual(ctx._scheduled[1].startedAt, 0.15);
   assert.equal(pump.queueLength, 1);
-  // Avanza il tempo per consentire al prossimo tick di schedulare il remaining
+  // Advance time so the next tick can schedule the remaining buffer.
   ctx.advance(0.15);  // currentTime 0.15
   pump.processTicks();
-  // nextStartTime 0.20, now 0.15, lead 0.05 ≤ 0.16 → schedule at 0.20, queue vuota.
+  // nextStartTime 0.20, now 0.15, lead 0.05 <= 0.16 -> schedule at 0.20, queue empty.
   assert.equal(ctx._scheduled.length, 3);
   approxEqual(ctx._scheduled[2].startedAt, 0.20);
   pump.stop();
 });
 
-test('stop: resetta stato e ferma scheduling', () => {
+test('stop: resets state and stops scheduling', () => {
   const ctx = makeMockCtx(0);
   const pump = createAudioPump(ctx);
   pump.start();
@@ -153,9 +153,9 @@ test('stop: resetta stato e ferma scheduling', () => {
   pump.stop();
   pump.push(makeBuffer(0.02));
   pump.processTicks();
-  // Dopo stop, push/processTicks non deve schedulare (running=false)
+  // After stop, push/processTicks must not schedule (running=false).
   assert.equal(ctx._scheduled.length, 1);
   assert.equal(pump.running, false);
-  assert.equal(pump.queueLength, 1);  // il buffer push è rimasto in coda
+  assert.equal(pump.queueLength, 1);  // pushed buffer remained queued
   assert.equal(pump.nextStartTime, -1);
 });

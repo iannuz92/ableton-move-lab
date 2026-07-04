@@ -1,59 +1,61 @@
 # Raspberry Pi 4 Image
 
-Procedura per partire da un clone GitHub del repo e da una immagine originale
-Ableton Move locale, poi ottenere una microSD Raspberry Pi 4 con Move + GUI web.
+This target starts from a GitHub clone of this repository and a local original
+Ableton Move recovery image, then produces a Raspberry Pi 4 microSD image that
+runs Move with the web GUI.
 
-Il repo non contiene binari Ableton o immagini `.img`.
+The repository does not contain Ableton binaries or `.img` files.
 
-## Prerequisiti
+## Prerequisites
 
 - Raspberry Pi 4.
-- microSD.
-- Immagine originale:
+- microSD card.
+- Local Move recovery image:
 
 ```text
 local/images/Move-Image-2.0.5.img
 ```
 
-Download ufficiale Ableton:
+Official Ableton recovery download:
 
 ```text
 https://www.ableton.com/download/hardware/latest/move/recovery/
 ```
 
-- Chiave SSH pubblica locale:
+- Local SSH public key:
 
 ```text
 ~/.ssh/id_rsa.pub
 ```
 
-- `e2fsprogs` su macOS:
+- `e2fsprogs` on macOS:
 
 ```sh
 brew install e2fsprogs
 ```
 
-- Tool per scrivere la microSD, per esempio Raspberry Pi Imager o `dd`.
-- Rete verso il Pi su `172.16.254.1`, come l'immagine Move espone di default.
+- A tool for writing the microSD card, such as Raspberry Pi Imager or `dd`.
+- Network access to the Pi at `172.16.254.1`, which is the default address
+  exposed by the Move image.
 
-## 1. Compilare Lo Shim
+## 1. Build The Shim
 
-Se esiste gia':
+If this file already exists:
 
 ```text
 emulator/libablspi_shim.so
 ```
 
-puoi saltare questo passaggio.
+you can skip this step.
 
-Altrimenti:
+Otherwise run:
 
 ```sh
 ./emulator/build-shim.sh
 ```
 
-Su Mac senza toolchain ARM64 Linux, il modo piu' semplice e' fare prima il build
-container, che compila lo shim con Docker:
+On a Mac without a Linux ARM64 toolchain, the simplest path is to run the
+container build first. It compiles the shim with Docker:
 
 ```sh
 cd container
@@ -61,23 +63,23 @@ cd container
 cd ..
 ```
 
-Verifica attesa:
+Expected verification:
 
 ```sh
 file emulator/libablspi_shim.so
 ```
 
-Deve essere un `.so` Linux ARM64/AArch64.
+It must be a Linux ARM64/AArch64 `.so`.
 
-## 2. Creare Immagine SSH-Ready
+## 2. Create The SSH-Ready Image
 
-Da root repo:
+From the repository root:
 
 ```sh
 ./raspberry/make-image.sh
 ```
 
-Equivale a:
+This is equivalent to:
 
 ```sh
 ./raspberry/make-image.sh ~/.ssh/id_rsa.pub \
@@ -85,49 +87,47 @@ Equivale a:
   local/images/Move-Image-2.0.5-pi4.img
 ```
 
-Lo script:
+The script:
 
-- clona l'immagine originale;
-- trova la partizione `/data` dalla MBR;
-- inserisce la tua chiave pubblica in `/authorized_keys`;
-- produce:
-
-```text
-local/images/Move-Image-2.0.5-pi4.img
-```
-
-## 3. Scrivere La microSD
-
-Scrivere:
+- clones the original image;
+- finds the `/data` partition from the MBR;
+- injects your public SSH key into `/authorized_keys`;
+- produces:
 
 ```text
 local/images/Move-Image-2.0.5-pi4.img
 ```
 
-sulla microSD.
+## 3. Write The microSD
 
-Avviare il Raspberry Pi 4.
+Write this image to the microSD card:
 
-## 4. Primo Accesso SSH
+```text
+local/images/Move-Image-2.0.5-pi4.img
+```
 
-Verifica:
+Then boot the Raspberry Pi 4.
+
+## 4. First SSH Login
+
+Verify access:
 
 ```sh
 ssh root@172.16.254.1 'uname -a; id; hostname'
 ```
 
-Se la host key e' nuova, accettarla.
+Accept the host key if this is the first connection.
 
-## 5. Installare Node.js Sul Pi
+## 5. Install Node.js On The Pi
 
-Sul computer:
+On your computer:
 
 ```sh
 curl -LO https://nodejs.org/dist/v20.18.1/node-v20.18.1-linux-arm64.tar.xz
 scp node-v20.18.1-linux-arm64.tar.xz root@172.16.254.1:/data/
 ```
 
-Sul Pi:
+On the Pi:
 
 ```sh
 ssh root@172.16.254.1 '
@@ -137,9 +137,9 @@ ssh root@172.16.254.1 '
 '
 ```
 
-## 6. Copiare Runtime Dalla Repo
+## 6. Copy The Runtime From The Repository
 
-Creare cartelle:
+Create runtime directories:
 
 ```sh
 ssh root@172.16.254.1 '
@@ -147,14 +147,14 @@ ssh root@172.16.254.1 '
 '
 ```
 
-Copiare shim e script nativo:
+Copy the shim and native launcher:
 
 ```sh
 scp emulator/libablspi_shim.so root@172.16.254.1:/emulator/libablspi_shim.so
 scp raspberry/start-native.sh root@172.16.254.1:/emulator/start-native.sh
 ```
 
-Copiare server, librerie e frontend:
+Copy the server, libraries, and frontend:
 
 ```sh
 scp emulator/server.mjs root@172.16.254.1:/data/emulator-gui/server.mjs
@@ -162,7 +162,7 @@ scp -r emulator/lib root@172.16.254.1:/data/emulator-gui/lib
 scp -r emulator/public root@172.16.254.1:/data/emulator-gui/public
 ```
 
-Permessi:
+Set permissions:
 
 ```sh
 ssh root@172.16.254.1 '
@@ -171,29 +171,29 @@ ssh root@172.16.254.1 '
 '
 ```
 
-## 7. Avviare Move + GUI
+## 7. Start Move + GUI
 
-Sul Pi:
+On the Pi:
 
 ```sh
 ssh root@172.16.254.1 '/emulator/start-native.sh'
 ```
 
-Poi aprire:
+Then open:
 
 ```text
 http://172.16.254.1:9090
 ```
 
-## 8. Verifiche
+## 8. Verification
 
-Stato:
+Status:
 
 ```sh
 curl http://172.16.254.1:9090/api/status
 ```
 
-Atteso:
+Expected:
 
 ```json
 {"bridge":"running"}
@@ -205,7 +205,7 @@ Display:
 curl http://172.16.254.1:9090/api/display
 ```
 
-Atteso:
+Expected:
 
 ```json
 {"available":true,"width":128,"height":64}
@@ -222,15 +222,15 @@ ssh root@172.16.254.1 '
 '
 ```
 
-Il delta deve crescere. Target indicativo per PCM stereo 44.1 kHz 16-bit:
+The delta should increase. Approximate target for 44.1 kHz stereo 16-bit PCM:
 
 ```text
 ~176400 B/s
 ```
 
-## 9. Avvio Automatico Opzionale
+## 9. Optional Autostart
 
-Creare init script:
+Create an init script:
 
 ```sh
 ssh root@172.16.254.1 'cat > /etc/init.d/move-native-emulator <<'"'"'SH'"'"'
@@ -252,8 +252,8 @@ SH
 chmod 755 /etc/init.d/move-native-emulator'
 ```
 
-Se l'immagine usa SysV init, collegare lo script nella runlevel directory
-appropriata, per esempio:
+If the image uses SysV init, link the script into the appropriate runlevel
+directory, for example:
 
 ```sh
 ssh root@172.16.254.1 '
@@ -261,9 +261,9 @@ ssh root@172.16.254.1 '
 '
 ```
 
-## File Coinvolti
+## Files Used
 
-Dal repo vengono usati:
+From the repository:
 
 ```text
 raspberry/make-image.sh
@@ -274,7 +274,7 @@ emulator/lib/
 emulator/public/
 ```
 
-Fuori dal Git servono:
+Outside Git:
 
 ```text
 local/images/Move-Image-2.0.5.img
